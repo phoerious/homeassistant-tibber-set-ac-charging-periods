@@ -135,24 +135,24 @@ blueprint:
           unit_of_measurement: '%'
 
     best_charge_time_target_hours:
-      name: Target minimum charge window (hours)
-      description: Tries to start charging half the target window size before a low peak.
-      default: 2.5
+      name: Max Charge Time Before Best Price
+      description: Maximum amount of time in hours to start charging before a best price low peak.
+      default: 1.5
       selector:
         number:
           min: 0
-          max: 24
+          max: 12
           step: 0.25
           unit_of_measurement: h
 
     peak_discharge_target_hours:
-      name: Peak Discharge Target (hours)
-      description: Tries to start discharging half the target window size before a high peak.
-      default: 4
+      name: Max Discharge Time Before Peak Price
+      description: Maximum amount of time in hours to start charging before a price peak.
+      default: 2.5
       selector:
         number:
           min: 0
-          max: 24
+          max: 12
           step: 0.25
           unit_of_measurement: h
 
@@ -193,7 +193,7 @@ variables:
 
     {% for p in state_attr(best_price_period, 'periods') or [] %}
       {% if as_datetime(p.start) < now_ts < as_datetime(p.end) and p.level == 'very_cheap' %}
-        {% if ('Falling' in current_trend and trend_change_in / 2 < best_charge_time_target_hours)
+        {% if ('Falling' in current_trend and trend_change_in < best_charge_time_target_hours)
           or 'Falling' not in current_trend %}
           {% if p['day_volatility_%'] > high_volatility_pct %}
             {% set t.low = min(p.price_max, low_hard_limit_high_volatility) %}
@@ -209,7 +209,7 @@ variables:
       {% if as_datetime(p.start) < now_ts < as_datetime(p.end)
         and p.level in ['expensive', 'very_expensive']
         and p['day_volatility_%'] > min_discharge_volatility_pct %}
-      {% if ('Rising' in current_trend and trend_change_in / 2 < peak_discharge_target_hours)
+      {% if ('Rising' in current_trend and trend_change_in < peak_discharge_target_hours)
           or 'Rising' not in current_trend %}
           {% set t.high = p.price_min %}
         {% endif %}

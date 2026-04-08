@@ -1,0 +1,235 @@
+blueprint:
+  name: Set AC Charging Price Limits
+  description: >
+    Dynamically sets AC charging low/high price limits based on electricity price signals, volatility, and trend analysis.
+    Requires the "Tibber Price Information & Ratings" integration (https://github.com/jpawlowski/hass.tibber_prices).
+  domain: automation
+  input:
+    hold_boolean:
+      name: Hold Charging Prices Boolean
+      description: Toggle to disable automatic price window update (use if you want to manually override the min and max values).
+      default: input_boolean.ac_charging_hold_prices
+      selector:
+        entity:
+          domain: input_boolean
+
+    low_price_input:
+      name: Low Price Threshold Input Number
+      description: Input number helper for storing the maximum low price for AC charging.
+      default: input_number.ac_charging_low_price
+      selector:
+        entity:
+          domain: input_number
+
+    high_price_input:
+      name: High Price Threshold Input Number
+      description: Input number helper for storing the minimum high price for AC discharge.
+      default: input_number.ac_charging_high_price
+      selector:
+        entity:
+          domain: input_number
+
+    electricity_price_sensor:
+      name: Electricity Price Sensor
+      description: Current electricity price
+      default: sensor.<home-addr>_electricity_price
+      selector:
+        entity:
+          domain: sensor
+          device_class: monetary
+
+    day_lowest_price:
+      name: Day Lowest Price Sensor
+      description: Sensor for lowest price of the day.
+      default: sensor.<home-addr>_today_s_lowest_price
+      selector:
+        entity:
+          domain: sensor
+          device_class: monetary
+
+    day_highest_price:
+      name: Day Highest Price Sensor
+      description: Sensor for highest price of the day.
+      default: sensor.<home-addr>_today_s_highest_price
+      selector:
+        entity:
+          domain: sensor
+          device_class: monetary
+
+    trend_change_in:
+      name: Trend Change In Sensor
+      description: Sensor for duration in hours until next price trend change.
+      default: sensor.<home-addr>_trend_change_in
+      selector:
+        entity:
+          domain: sensor
+          device_class: duration
+
+    current_trend:
+      name: Current Trend Sensor
+      description: Sensor for current price trend.
+      default: sensor.<home-addr>_current_price_trend
+      selector:
+        entity:
+          domain: sensor
+          device_class: enum
+
+    best_price_period:
+      name: Best Price Period Binary Sensor
+      description: Sensor for best price periods.
+      default: binary_sensor.<home-addr>_best_price_period
+      selector:
+        entity:
+          domain: binary_sensor
+
+    peak_price_period:
+      name: Peak Price Period Binary Sensor
+      description: Sensor for peak price periods.
+      default: binary_sensor.<home-addr>_peak_price_period
+      selector:
+        entity:
+          domain: binary_sensor
+
+    low_hard_limit:
+      name: Low Hard Limit
+      description: Hard upper price limit for AC charging (normal price volatility).
+      default: 0.1
+      selector:
+        number:
+          min: -1
+          max: 1
+          step: 0.01
+          unit_of_measurement: EUR/kWh
+
+    low_hard_limit_high_volatility:
+      name: Low Hard Limit (High Volatility)
+      description: Hard upper price limit for AC charging (high price volatility).
+      default: 0.22
+      selector:
+        number:
+          min: -1
+          max: 1
+          step: 0.01
+          unit_of_measurement: EUR/kWh
+
+    high_volatility_pct:
+      name: High Volatility Percentage
+      description: Threshold for high price volatility in percent.
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 200
+          step: 1
+          unit_of_measurement: '%'
+
+    min_discharge_volatility_pct:
+      name: Min Discharge Volatility Percentage
+      description: Minimum daily price volatility in percent to allow discharging.
+      default: 80
+      selector:
+        number:
+          min: 0
+          max: 300
+          step: 1
+          unit_of_measurement: '%'
+
+    best_charge_time_target_hours:
+      name: Target minimum charge window (hours)
+      description: Tries to start charging half the target window size before the peak.
+      default: 2.5
+      selector:
+        number:
+          min: 0
+          max: 24
+          step: 0.25
+          unit_of_measurement: h
+
+    peak_discharge_target_hours:
+      name: Peak Discharge Target (hours)
+      description: Tries to start discharging half the target window size before the peak.
+      default: 4
+      selector:
+        number:
+          min: 0
+          max: 24
+          step: 0.25
+          unit_of_measurement: h
+
+trigger:
+  - platform: state
+    entity_id: !input electricity_price_sensor
+  - platform: state
+    entity_id: !input hold_boolean
+
+condition:
+  - condition: state
+    entity_id: !input hold_boolean
+    state: "off"
+
+variables:
+  low_hard_limit: !input low_hard_limit
+  low_hard_limit_high_volatility: !input low_hard_limit_high_volatility
+  high_volatility_pct: !input high_volatility_pct
+  min_discharge_volatility_pct: !input min_discharge_volatility_pct
+  best_charge_time_target_hours: !input best_charge_time_target_hours
+  peak_discharge_target_hours: !input peak_discharge_target_hours
+
+  day_lowest_price: !input day_lowest_price
+  day_highest_price: !input day_highest_price
+  trend_change_in: !input trend_change_in
+  current_trend: !input current_trend
+  best_price_period: !input best_price_period
+  peak_price_period: !input peak_price_period
+
+  result: >
+    {% set now_ts = now() %}
+    {% set t = namespace(
+      low=states(day_lowest_price) | float(0) - 0.01,
+      high=states(day_highest_price) | float(99) + 0.01
+    ) %}
+    {% set trend_change_in = states(trend_change_in) | float(0) %}
+    {% set current_trend = states(current_trend) %}
+
+    {% for p in state_attr(best_price_period, 'periods') or [] %}
+      {% if as_datetime(p.start) < now_ts < as_datetime(p.end) and p.level == 'very_cheap' %}
+        {% if ('Falling' in current_trend and trend_change_in / 2 < best_charge_time_target_hours)
+          or 'Falling' not in current_trend %}
+          {% if p['day_volatility_%'] > high_volatility_pct %}
+            {% set t.low = min(p.price_max, low_hard_limit_high_volatility) %}
+          {% else %}
+            {% set t.low = min(p.price_max, low_hard_limit) %}
+          {% endif %}
+        {% endif %}
+        {% break %}
+      {% endif %}
+    {% endfor %}
+
+    {% for p in state_attr(peak_price_period, 'periods') or [] %}
+      {% if as_datetime(p.start) < now_ts < as_datetime(p.end)
+        and p.level in ['expensive', 'very_expensive']
+        and p['day_volatility_%'] > min_discharge_volatility_pct %}
+      {% if ('Rising' in current_trend and trend_change_in / 2 < peak_discharge_target_hours)
+          or 'Rising' not in current_trend %}
+          {% set t.high = p.price_min %}
+        {% endif %}
+        {% break %}
+      {% endif %}
+    {% endfor %}
+
+    {{ {'low': t.low, 'high': t.high} }}
+
+action:
+  - service: input_number.set_value
+    target:
+      entity_id: !input low_price_input
+    data:
+      value: "{{ result.low }}"
+
+  - service: input_number.set_value
+    target:
+      entity_id: !input high_price_input
+    data:
+      value: "{{ result.high }}"
+
+mode: single

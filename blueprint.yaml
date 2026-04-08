@@ -91,7 +91,7 @@ blueprint:
           domain: binary_sensor
 
     low_hard_limit:
-      name: Low Hard Limit
+      name: Low-price Hard Limit
       description: Hard upper price limit for AC charging (normal price volatility).
       default: 0.1
       selector:
@@ -102,7 +102,7 @@ blueprint:
           unit_of_measurement: EUR/kWh
 
     low_hard_limit_high_volatility:
-      name: Low Hard Limit (High Volatility)
+      name: Low-price Hard Limit (High Volatility)
       description: Hard upper price limit for AC charging (high price volatility).
       default: 0.22
       selector:

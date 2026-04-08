@@ -6,7 +6,7 @@ blueprint:
   domain: automation
   input:
     hold_boolean:
-      name: Hold Charging Prices Boolean
+      name: Hold Charging Prices Toggle
       description: Toggle to disable automatic price window update (use if you want to manually override the min and max values).
       default: input_boolean.ac_charging_hold_prices
       selector:

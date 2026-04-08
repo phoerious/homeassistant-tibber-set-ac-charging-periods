@@ -136,7 +136,7 @@ blueprint:
 
     best_charge_time_target_hours:
       name: Target minimum charge window (hours)
-      description: Tries to start charging half the target window size before the peak.
+      description: Tries to start charging half the target window size before a low peak.
       default: 2.5
       selector:
         number:
@@ -147,7 +147,7 @@ blueprint:
 
     peak_discharge_target_hours:
       name: Peak Discharge Target (hours)
-      description: Tries to start discharging half the target window size before the peak.
+      description: Tries to start discharging half the target window size before a high peak.
       default: 4
       selector:
         number:

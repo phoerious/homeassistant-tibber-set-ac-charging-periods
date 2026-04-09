@@ -148,7 +148,7 @@ blueprint:
     best_price_min_level:
       name: Min Best Price Level
       description: Minimum best price period level to allow charging.
-      default: Very Cheap
+      default: Cheap
       selector:
         select:
           options:
@@ -231,10 +231,15 @@ variables:
       {% if as_datetime(p.start) < now_ts < as_datetime(p.end) and p.level in best_price_min_level_list %}
         {% if ('Falling' in current_trend and trend_change_in < best_charge_time_target_hours)
           or 'Falling' not in current_trend %}
-          {% if p['day_volatility_%'] > high_volatility_pct %}
-            {% set t.low = min(p.price_max + 0.001, low_hard_limit_high_volatility) %}
+          {% if p.level == 'very_cheap' %}
+            {% set t.low = p.price_max + 0.001 %}
           {% else %}
-            {% set t.low = min(p.price_max + 0.001, low_hard_limit) %}
+            {% set t.low = p.price_median + 0.001 %}
+          {% endif %}
+          {% if p['day_volatility_%'] > high_volatility_pct %}
+            {% set t.low = min(t.low, low_hard_limit_high_volatility) %}
+          {% else %}
+            {% set t.low = min(t.low, low_hard_limit) %}
           {% endif %}
         {% endif %}
         {% break %}

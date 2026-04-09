@@ -5,167 +5,177 @@ blueprint:
     Requires the "Tibber Price Information & Ratings" integration (https://github.com/jpawlowski/hass.tibber_prices).
   domain: automation
   input:
-    hold_boolean:
-      name: Hold Charging Prices Toggle
-      description: Toggle to disable automatic price window update (use if you want to manually override the min and max values).
-      default: input_boolean.ac_charging_hold_prices
-      selector:
-        entity:
-          domain: input_boolean
+    sensors_and_helpers:
+      name: ⚙️ Sensors and Helpers
+      collapsed: true
+      input:
+        hold_boolean:
+          name: Hold Charging Prices Toggle
+          description: Toggle to disable automatic price window update (use if you want to manually override the min and max values).
+          default: input_boolean.ac_charging_hold_prices
+          selector:
+            entity:
+              domain: input_boolean
 
-    low_price_input:
-      name: Low Price Threshold Input Number
-      description: Input number helper for storing the maximum low price for AC charging.
-      default: input_number.ac_charging_low_price
-      selector:
-        entity:
-          domain: input_number
+        low_price_input:
+          name: Low Price Threshold Input Number
+          description: Input number helper for storing the maximum low price for AC charging.
+          default: input_number.ac_charging_low_price
+          selector:
+            entity:
+              domain: input_number
 
-    high_price_input:
-      name: High Price Threshold Input Number
-      description: Input number helper for storing the minimum high price for AC discharge.
-      default: input_number.ac_charging_high_price
-      selector:
-        entity:
-          domain: input_number
+        high_price_input:
+          name: High Price Threshold Input Number
+          description: Input number helper for storing the minimum high price for AC discharge.
+          default: input_number.ac_charging_high_price
+          selector:
+            entity:
+              domain: input_number
 
-    electricity_price_sensor:
-      name: Electricity Price Sensor
-      description: Current electricity price
-      default: sensor.<home-addr>_electricity_price
-      selector:
-        entity:
-          domain: sensor
-          device_class: monetary
+        electricity_price_sensor:
+          name: Electricity Price Sensor
+          description: Current electricity price
+          default: sensor.<home-addr>_electricity_price
+          selector:
+            entity:
+              domain: sensor
+              device_class: monetary
 
-    day_lowest_price:
-      name: Day Lowest Price Sensor
-      description: Sensor for lowest price of the day.
-      default: sensor.<home-addr>_today_s_lowest_price
-      selector:
-        entity:
-          domain: sensor
-          device_class: monetary
+        day_lowest_price:
+          name: Day Lowest Price Sensor
+          description: Sensor for lowest price of the day.
+          default: sensor.<home-addr>_today_s_lowest_price
+          selector:
+            entity:
+              domain: sensor
+              device_class: monetary
 
-    day_highest_price:
-      name: Day Highest Price Sensor
-      description: Sensor for highest price of the day.
-      default: sensor.<home-addr>_today_s_highest_price
-      selector:
-        entity:
-          domain: sensor
-          device_class: monetary
+        day_highest_price:
+          name: Day Highest Price Sensor
+          description: Sensor for highest price of the day.
+          default: sensor.<home-addr>_today_s_highest_price
+          selector:
+            entity:
+              domain: sensor
+              device_class: monetary
 
-    trend_change_in:
-      name: Trend Change In Sensor
-      description: Sensor for duration in hours until next price trend change.
-      default: sensor.<home-addr>_trend_change_in
-      selector:
-        entity:
-          domain: sensor
-          device_class: duration
+        trend_change_in:
+          name: Trend Change In Sensor
+          description: Sensor for duration in hours until next price trend change.
+          default: sensor.<home-addr>_trend_change_in
+          selector:
+            entity:
+              domain: sensor
+              device_class: duration
 
-    current_trend:
-      name: Current Trend Sensor
-      description: Sensor for current price trend.
-      default: sensor.<home-addr>_current_price_trend
-      selector:
-        entity:
-          domain: sensor
-          device_class: enum
+        current_trend:
+          name: Current Trend Sensor
+          description: Sensor for current price trend.
+          default: sensor.<home-addr>_current_price_trend
+          selector:
+            entity:
+              domain: sensor
+              device_class: enum
 
-    best_price_period:
-      name: Best Price Period Binary Sensor
-      description: Sensor for best price periods.
-      default: binary_sensor.<home-addr>_best_price_period
-      selector:
-        entity:
-          domain: binary_sensor
+        best_price_period:
+          name: Best Price Period Binary Sensor
+          description: Sensor for best price periods.
+          default: binary_sensor.<home-addr>_best_price_period
+          selector:
+            entity:
+              domain: binary_sensor
 
-    peak_price_period:
-      name: Peak Price Period Binary Sensor
-      description: Sensor for peak price periods.
-      default: binary_sensor.<home-addr>_peak_price_period
-      selector:
-        entity:
-          domain: binary_sensor
+        peak_price_period:
+          name: Peak Price Period Binary Sensor
+          description: Sensor for peak price periods.
+          default: binary_sensor.<home-addr>_peak_price_period
+          selector:
+            entity:
+              domain: binary_sensor
 
-    low_hard_limit:
-      name: Low-price Hard Limit
-      description: Hard upper price limit for AC charging (normal price volatility).
-      default: 0.1
-      selector:
-        number:
-          min: -1
-          max: 1
-          step: 0.01
-          unit_of_measurement: EUR/kWh
+    charging:
+      name: 🔌 AC Charging Settings
+      input:
+        low_hard_limit:
+          name: Low-price Hard Limit
+          description: Hard upper price limit for AC charging (normal price volatility).
+          default: 0.1
+          selector:
+            number:
+              min: -1
+              max: 1
+              step: 0.01
+              unit_of_measurement: EUR/kWh
 
-    low_hard_limit_high_volatility:
-      name: Low-price Hard Limit (High Volatility)
-      description: Hard upper price limit for AC charging (high price volatility).
-      default: 0.20
-      selector:
-        number:
-          min: -1
-          max: 1
-          step: 0.01
-          unit_of_measurement: EUR/kWh
+        low_hard_limit_high_volatility:
+          name: Low-price Hard Limit (High Volatility)
+          description: Hard upper price limit for AC charging (high price volatility).
+          default: 0.20
+          selector:
+            number:
+              min: -1
+              max: 1
+              step: 0.01
+              unit_of_measurement: EUR/kWh
 
-    high_volatility_pct:
-      name: High Volatility Percentage
-      description: Threshold for high price volatility in percent.
-      default: 70
-      selector:
-        number:
-          min: 0
-          max: 200
-          step: 1
-          unit_of_measurement: '%'
+        high_volatility_pct:
+          name: High Volatility Percentage
+          description: Threshold for high price volatility in percent.
+          default: 70
+          selector:
+            number:
+              min: 0
+              max: 200
+              step: 1
+              unit_of_measurement: '%'
 
-    best_max_time_to_trend_change:
-      name: Max Charge Time Before Best Price
-      description: Maximum amount of time in hours to start charging before a best price low peak.
-      default: 1
-      selector:
-        number:
-          min: 0
-          max: 6
-          step: 0.25
-          unit_of_measurement: h
+        best_min_rating_pct:
+          name: Min Charge Price Difference
+          description: Minimum percentage price needs to differ from the 24h average for charging.
+          default: -20
+          selector:
+            number:
+              min: -50
+              max: 0
+              step: 1
+              unit_of_measurement: '%'
 
-    best_min_rating_pct:
-      name: Min Charge Price Difference
-      description: Minimum percentage price needs to differ from the 24h average for charging.
-      default: -20
-      selector:
-        number:
-          min: -50
-          max: 0
-          step: 1
-          unit_of_measurement: '%'
+        best_max_time_to_trend_change:
+          name: Max Charge Time Before Best Price
+          description: Maximum amount of time in hours to start charging before a best price low peak.
+          default: 1
+          selector:
+            number:
+              min: 0
+              max: 6
+              step: 0.25
+              unit_of_measurement: h
 
-    peak_max_time_to_trend_change:
-      name: Max Discharge Time Before Peak Price
-      description: Maximum amount of time in hours to start charging before a price peak.
-      default: 1.5
-      selector:
-        number:
-          min: 0
-          max: 6
-          step: 0.25
-          unit_of_measurement: h
+    discharge:
+      name: 🔋 Battery Discharge Settings
+      input:
+        peak_min_rating_pct:
+          name: Min Charge Price Difference
+          description: Minimum percentage price needs to differ from 24h average for discharge.
+          default: 15
+          selector:
+            number:
+              min: 0
+              max: 50
+              step: 1
+              unit_of_measurement: '%'
 
-    peak_min_rating_pct:
-      name: Min Charge Price Difference
-      description: Minimum percentage price needs to differ from 24h average for discharging.
-      default: 15
-      selector:
-        number:
-          min: 0
-          max: 50
-          step: 1
-          unit_of_measurement: '%'
+        peak_max_time_to_trend_change:
+          name: Max Discharge Time Before Peak Price
+          description: Maximum amount of time in hours to start charging before a price peak.
+          default: 1.5
+          selector:
+            number:
+              min: 0
+              max: 6
+              step: 0.25
+              unit_of_measurement: h
 
 trigger:
   - platform: state
@@ -179,20 +189,21 @@ condition:
     state: "off"
 
 variables:
-  low_hard_limit: !input low_hard_limit
-  low_hard_limit_high_volatility: !input low_hard_limit_high_volatility
-  high_volatility_pct: !input high_volatility_pct
-  best_max_time_to_trend_change: !input best_max_time_to_trend_change
-  best_min_rating_pct: !input best_min_rating_pct
-  peak_max_time_to_trend_change: !input peak_max_time_to_trend_change
-  peak_min_rating_pct: !input peak_min_rating_pct
-
   day_lowest_price: !input day_lowest_price
   day_highest_price: !input day_highest_price
   trend_change_in: !input trend_change_in
   current_trend: !input current_trend
   best_price_period: !input best_price_period
   peak_price_period: !input peak_price_period
+
+  low_hard_limit: !input low_hard_limit
+  low_hard_limit_high_volatility: !input low_hard_limit_high_volatility
+  high_volatility_pct: !input high_volatility_pct
+  best_min_rating_pct: !input best_min_rating_pct
+  best_max_time_to_trend_change: !input best_max_time_to_trend_change
+
+  peak_min_rating_pct: !input peak_min_rating_pct
+  peak_max_time_to_trend_change: !input peak_max_time_to_trend_change
 
   result: >
     {% set now_ts = now() %}

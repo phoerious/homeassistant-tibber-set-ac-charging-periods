@@ -104,7 +104,7 @@ blueprint:
     low_hard_limit_high_volatility:
       name: Low-price Hard Limit (High Volatility)
       description: Hard upper price limit for AC charging (high price volatility).
-      default: 0.22
+      default: 0.20
       selector:
         number:
           min: -1
@@ -115,7 +115,7 @@ blueprint:
     high_volatility_pct:
       name: High Volatility Percentage
       description: Threshold for high price volatility in percent.
-      default: 100
+      default: 70
       selector:
         number:
           min: 0
@@ -126,7 +126,7 @@ blueprint:
     min_discharge_volatility_pct:
       name: Min Discharge Volatility Percentage
       description: Minimum daily price volatility in percent to allow discharging.
-      default: 80
+      default: 55
       selector:
         number:
           min: 0

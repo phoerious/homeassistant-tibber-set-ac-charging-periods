@@ -148,7 +148,7 @@ blueprint:
     peak_discharge_target_hours:
       name: Max Discharge Time Before Peak Price
       description: Maximum amount of time in hours to start charging before a price peak.
-      default: 2.5
+      default: 2
       selector:
         number:
           min: 0
@@ -196,9 +196,9 @@ variables:
         {% if ('Falling' in current_trend and trend_change_in < best_charge_time_target_hours)
           or 'Falling' not in current_trend %}
           {% if p['day_volatility_%'] > high_volatility_pct %}
-            {% set t.low = min(p.price_max + 0.01, low_hard_limit_high_volatility) %}
+            {% set t.low = min(p.price_max + 0.001, low_hard_limit_high_volatility) %}
           {% else %}
-            {% set t.low = min(p.price_max + 0.01, low_hard_limit) %}
+            {% set t.low = min(p.price_max + 0.001, low_hard_limit) %}
           {% endif %}
         {% endif %}
         {% break %}
@@ -211,7 +211,11 @@ variables:
         and p['day_volatility_%'] > min_discharge_volatility_pct %}
       {% if ('Rising' in current_trend and trend_change_in < peak_discharge_target_hours)
           or 'Rising' not in current_trend %}
-          {% set t.high = p.price_min %}
+          {% if p.level == 'very_expensive' %}
+            {% set t.high = p.price_min - 0.001 %}
+          {% else %}
+            {% set t.high = p.price_median - 0.001 %}
+          {% endif %}
         {% endif %}
         {% break %}
       {% endif %}

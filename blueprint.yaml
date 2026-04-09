@@ -145,6 +145,17 @@ blueprint:
           step: 0.25
           unit_of_measurement: h
 
+    best_price_min_level:
+      name: Min Best Price Level
+      description: Minimum best price period level to allow charging.
+      default: Very Cheap
+      selector:
+        select:
+          options:
+            - Very Cheap
+            - Cheap
+            - Normal
+
     peak_discharge_target_hours:
       name: Max Discharge Time Before Peak Price
       description: Maximum amount of time in hours to start charging before a price peak.
@@ -155,6 +166,17 @@ blueprint:
           max: 12
           step: 0.25
           unit_of_measurement: h
+
+    peak_price_min_level:
+      name: Min Peak Price Level
+      description: Minimum peak price period level to allow discharging.
+      default: Expensive
+      selector:
+        select:
+          options:
+            - Very Expensive
+            - Expensive
+            - Normal
 
 trigger:
   - platform: state
@@ -191,8 +213,22 @@ variables:
     {% set trend_change_in = states(trend_change_in) | float(0) %}
     {% set current_trend = states(current_trend) %}
 
+    {% set best_price_min_level_list = ['very_cheap'] %}
+    {% if best_price_min_level == 'Cheap' %}
+      {% set best_price_min_level_list = best_price_min_level_list + ['cheap'] %}
+    {% elif best_price_min_level == 'Normal' %}
+      {% set best_price_min_level_list = best_price_min_level_list + ['cheap', 'normal'] %}
+    {% endif %}
+
+    {% set peak_price_min_level_list = ['very_expensive'] %}
+    {% if peak_price_min_level == 'Expensive' %}
+      {% set peak_price_min_level_list = peak_price_min_level_list + ['expensive'] %}
+    {% elif peak_price_min_level == 'Normal' %}
+      {% set peak_price_min_level_list = peak_price_min_level_list + ['expensive', 'normal'] %}
+    {% endif %}
+
     {% for p in state_attr(best_price_period, 'periods') or [] %}
-      {% if as_datetime(p.start) < now_ts < as_datetime(p.end) and p.level == 'very_cheap' %}
+      {% if as_datetime(p.start) < now_ts < as_datetime(p.end) and p.level in best_price_min_level_list %}
         {% if ('Falling' in current_trend and trend_change_in < best_charge_time_target_hours)
           or 'Falling' not in current_trend %}
           {% if p['day_volatility_%'] > high_volatility_pct %}
@@ -206,8 +242,7 @@ variables:
     {% endfor %}
 
     {% for p in state_attr(peak_price_period, 'periods') or [] %}
-      {% if as_datetime(p.start) < now_ts < as_datetime(p.end)
-        and p.level in ['expensive', 'very_expensive']
+      {% if as_datetime(p.start) < now_ts < as_datetime(p.end) and p.level in peak_price_min_level_list
         and p['day_volatility_%'] > min_discharge_volatility_pct %}
       {% if ('Rising' in current_trend and trend_change_in < peak_discharge_target_hours)
           or 'Rising' not in current_trend %}

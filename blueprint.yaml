@@ -123,60 +123,49 @@ blueprint:
           step: 1
           unit_of_measurement: '%'
 
-    min_discharge_volatility_pct:
-      name: Min Discharge Volatility Percentage
-      description: Minimum daily price volatility in percent to allow discharging.
-      default: 55
+    best_max_time_to_trend_change:
+      name: Max Charge Time Before Best Price
+      description: Maximum amount of time in hours to start charging before a best price low peak.
+      default: 1
       selector:
         number:
           min: 0
-          max: 300
+          max: 6
+          step: 0.25
+          unit_of_measurement: h
+
+    best_min_rating_pct:
+      name: Min Charge Price Difference
+      description: Minimum percentage price needs to differ from the 24h average for charging.
+      default: -20
+      selector:
+        number:
+          min: -50
+          max: 0
           step: 1
           unit_of_measurement: '%'
 
-    best_charge_time_target_hours:
-      name: Max Charge Time Before Best Price
-      description: Maximum amount of time in hours to start charging before a best price low peak.
+    peak_max_time_to_trend_change:
+      name: Max Discharge Time Before Peak Price
+      description: Maximum amount of time in hours to start charging before a price peak.
       default: 1.5
       selector:
         number:
           min: 0
-          max: 12
+          max: 6
           step: 0.25
           unit_of_measurement: h
 
-    best_price_min_level:
-      name: Min Best Price Level
-      description: Minimum best price period level to allow charging.
-      default: Cheap
-      selector:
-        select:
-          options:
-            - Very Cheap
-            - Cheap
-            - Normal
-
-    peak_discharge_target_hours:
-      name: Max Discharge Time Before Peak Price
-      description: Maximum amount of time in hours to start charging before a price peak.
-      default: 2
+    peak_min_rating_pct:
+      name: Min Charge Price Difference
+      description: Minimum percentage price needs to differ from 24h average for discharging.
+      default: 15
       selector:
         number:
           min: 0
-          max: 12
-          step: 0.25
-          unit_of_measurement: h
-
-    peak_price_min_level:
-      name: Min Peak Price Level
-      description: Minimum peak price period level to allow discharging.
-      default: Expensive
-      selector:
-        select:
-          options:
-            - Very Expensive
-            - Expensive
-            - Normal
+          max: 50
+          step: 1
+          unit_of_measurement: '%'
 
 trigger:
   - platform: state
@@ -193,9 +182,10 @@ variables:
   low_hard_limit: !input low_hard_limit
   low_hard_limit_high_volatility: !input low_hard_limit_high_volatility
   high_volatility_pct: !input high_volatility_pct
-  min_discharge_volatility_pct: !input min_discharge_volatility_pct
-  best_charge_time_target_hours: !input best_charge_time_target_hours
-  peak_discharge_target_hours: !input peak_discharge_target_hours
+  best_max_time_to_trend_change: !input best_max_time_to_trend_change
+  best_min_rating_pct: !input best_min_rating_pct
+  peak_max_time_to_trend_change: !input peak_max_time_to_trend_change
+  peak_min_rating_pct: !input peak_min_rating_pct
 
   day_lowest_price: !input day_lowest_price
   day_highest_price: !input day_highest_price
@@ -213,33 +203,13 @@ variables:
     {% set trend_change_in = states(trend_change_in) | float(0) %}
     {% set current_trend = states(current_trend) %}
 
-    {% set best_price_min_level_list = ['very_cheap'] %}
-    {% if best_price_min_level == 'Cheap' %}
-      {% set best_price_min_level_list = best_price_min_level_list + ['cheap'] %}
-    {% elif best_price_min_level == 'Normal' %}
-      {% set best_price_min_level_list = best_price_min_level_list + ['cheap', 'normal'] %}
-    {% endif %}
-
-    {% set peak_price_min_level_list = ['very_expensive'] %}
-    {% if peak_price_min_level == 'Expensive' %}
-      {% set peak_price_min_level_list = peak_price_min_level_list + ['expensive'] %}
-    {% elif peak_price_min_level == 'Normal' %}
-      {% set peak_price_min_level_list = peak_price_min_level_list + ['expensive', 'normal'] %}
-    {% endif %}
-
     {% for p in state_attr(best_price_period, 'periods') or [] %}
-      {% if as_datetime(p.start) < now_ts < as_datetime(p.end) and p.level in best_price_min_level_list %}
-        {% if ('Falling' in current_trend and trend_change_in < best_charge_time_target_hours)
-          or 'Falling' not in current_trend %}
-          {% if p.level == 'very_cheap' %}
-            {% set t.low = p.price_max + 0.001 %}
-          {% else %}
-            {% set t.low = p.price_median + 0.001 %}
-          {% endif %}
+      {% if as_datetime(p.start) < now_ts < as_datetime(p.end) and (p['rating_difference_%'] <= best_min_rating_pct or p.level == 'very_cheap') %}
+        {% if ('falling' in current_trend and trend_change_in < best_max_time_to_trend_change) or 'falling' not in current_trend %}
           {% if p['day_volatility_%'] > high_volatility_pct %}
-            {% set t.low = min(t.low, low_hard_limit_high_volatility) %}
+            {% set t.low = min(p.price_max + 0.001, low_hard_limit_high_volatility) %}
           {% else %}
-            {% set t.low = min(t.low, low_hard_limit) %}
+            {% set t.low = min(p.price_max + 0.001, low_hard_limit) %}
           {% endif %}
         {% endif %}
         {% break %}
@@ -247,15 +217,9 @@ variables:
     {% endfor %}
 
     {% for p in state_attr(peak_price_period, 'periods') or [] %}
-      {% if as_datetime(p.start) < now_ts < as_datetime(p.end) and p.level in peak_price_min_level_list
-        and p['day_volatility_%'] > min_discharge_volatility_pct %}
-      {% if ('Rising' in current_trend and trend_change_in < peak_discharge_target_hours)
-          or 'Rising' not in current_trend %}
-          {% if p.level == 'very_expensive' %}
-            {% set t.high = p.price_min - 0.001 %}
-          {% else %}
-            {% set t.high = p.price_median - 0.001 %}
-          {% endif %}
+      {% if as_datetime(p.start) < now_ts < as_datetime(p.end) and (p['rating_difference_%'] >= peak_min_rating_pct or p.level == 'very_expensive') %}
+        {% if ('rising' in current_trend and trend_change_in < peak_max_time_to_trend_change) or 'rising' not in current_trend %}
+          {% set t.high = p.price_min - 0.001 %}
         {% endif %}
         {% break %}
       {% endif %}

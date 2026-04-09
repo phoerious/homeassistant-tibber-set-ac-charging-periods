@@ -20,7 +20,9 @@ Install the Tibber price integration:
 
 ### Step 3:
 
-Set up and configure the integration (you may want to adjust the limits for best and peak price periods).
+Set up and configure the integration.
+
+In particular, you may want to adjust the flexibility settings for best and peak price periods. The defaults are quite conservative and may allow discharging only at the absolute tip of a peak on days with very high price spikes. A *Flexibility* setting of 15% with a *Minimum Distance* of 5% for best-price periods and -35% with a *Minimum Distance* of 15% for peak price periods seems to work quite well. The default minimum period lengths of 60m and 30m for best and peak are probably fine. You can also set the best-price level filter from *Cheap* to *Very Cheap* to find only shorter periods with the absolute lowest prices, but that may miss many otherwise viable low-price plateaus.
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=tibber_prices)
 
